@@ -243,13 +243,20 @@ def _extract_object_data(root, target_object_id):
                 # if type_elem is not None:
                 #     object_data["type"] = type_elem.text
 
-                latitude_elem = root.find(".//tt:Extension/NavigationalData/Latitude", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
-                if latitude_elem is not None:
-                    object_data["latitude"] = latitude_elem.text
+                # latitude_elem = root.find(".//tt:Extension/NavigationalData/Latitude", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
+                # if latitude_elem is not None:
+                #     object_data["latitude"] = latitude_elem.text
 
-                longitude_elem = root.find(".//tt:Extension/NavigationalData/Longitude", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
-                if longitude_elem is not None:
-                    object_data["longitude"] = longitude_elem.text
+                # longitude_elem = root.find(".//tt:Extension/NavigationalData/Longitude", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
+                # if longitude_elem is not None:
+                #     object_data["longitude"] = longitude_elem.text
+
+                geolocation_elem = object_elem.find(".//tt:GeoLocation", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
+                if geolocation_elem is not None:
+                    object_data["latitude"] = geolocation_elem.get("lat")
+                    object_data["longitude"] = geolocation_elem.get("lon")
+                    object_data["elevation"] = geolocation_elem.get("elevation")
+
 
                 speed_elem = object_elem.find(".//tt:Speed", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
                 if speed_elem is not None:
