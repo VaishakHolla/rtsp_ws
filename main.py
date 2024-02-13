@@ -17,6 +17,9 @@ object_info_tracking_stack = {}
 
 dataNumber = 1
 
+metadata_file_path="/data/metadata.txt"
+metadata_codha="/data/metadata_codha.txt"
+
 async def handle_websocket(websocket, path):
     try:
         print(f"Client connected from {websocket.remote_address}", flush=True)
@@ -38,7 +41,7 @@ async def handle_websocket(websocket, path):
 
         # Connect to the EOS (end-of-stream) signal
         bus = pipeline.get_bus()
-        bus.set_sync_handler(on_bus_message_sync, {"websocket": websocket, "pipeline": pipeline})
+        # bus.set_sync_handler(on_bus_message_sync, {"websocket": websocket, "pipeline": pipeline})
 
         pipeline.set_state(Gst.State.PLAYING)
 
@@ -133,7 +136,8 @@ def on_new_sample(appsink, data):
                 frame_sample_buffer.append(decoded_data)
                 combined_metadata = "".join(frame_sample_buffer)
                 frame_sample_buffer.clear()
-
+                with open(metadata_file_path, "a") as metadata_file:
+                    metadata_file.write(combined_metadata + "\n")
                 loop = data["loop"]
                 websocketserver = data["websocket"]
                 _process_metadata(combined_metadata, loop, websocketserver)
@@ -147,7 +151,7 @@ def _is_complete_metadata_frame(data):
     return data.endswith("</tt:MetadataStream>")
 
 def _process_metadata(data, loop, websocketserver):
-    # print(data,flush=True)
+    print(data,flush=True)
     try:
         # Tracking Notification Topics 
         entering_topic = "tns1:IVA/EnteringField/Entering_field"
@@ -206,6 +210,8 @@ def _process_leaving_object(notification_message):
         print(f"An error occurred in _process_leaving_object: {e}",flush=True)
 
 def _extract_object_data(root, target_object_id):
+    with open(metadata_codha, "a") as metadata_file:
+        metadata_file.write(root + "\n")
     try:
         object_data = {}
         
@@ -243,20 +249,13 @@ def _extract_object_data(root, target_object_id):
                 # if type_elem is not None:
                 #     object_data["type"] = type_elem.text
 
-                # latitude_elem = root.find(".//tt:Extension/NavigationalData/Latitude", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
-                # if latitude_elem is not None:
-                #     object_data["latitude"] = latitude_elem.text
+                latitude_elem = root.find(".//tt:Extension/NavigationalData/Latitude", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
+                if latitude_elem is not None:
+                    object_data["latitude"] = latitude_elem.text
 
-                # longitude_elem = root.find(".//tt:Extension/NavigationalData/Longitude", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
-                # if longitude_elem is not None:
-                #     object_data["longitude"] = longitude_elem.text
-
-                geolocation_elem = object_elem.find(".//tt:GeoLocation", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
-                if geolocation_elem is not None:
-                    object_data["latitude"] = geolocation_elem.get("lat")
-                    object_data["longitude"] = geolocation_elem.get("lon")
-                    object_data["elevation"] = geolocation_elem.get("elevation")
-
+                longitude_elem = root.find(".//tt:Extension/NavigationalData/Longitude", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
+                if longitude_elem is not None:
+                    object_data["longitude"] = longitude_elem.text
 
                 speed_elem = object_elem.find(".//tt:Speed", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
                 if speed_elem is not None:
@@ -272,8 +271,8 @@ def _send_data_to_client(loop, websocketserver, data_by_object_id):
     try:
         for object_id, value in data_by_object_id.items():
             global dataNumber
-            print(object_id,flush=True)
-            print(value.get("class_candidate_type"),flush=True)
+            # print(object_id,flush=True)
+            # print(value.get("class_candidate_type"),flush=True)
             if value.get("utc_time") and value.get("class_candidate_type") == "Human":
                 metadata_dict = {
                     "dataNumber": dataNumber,
@@ -306,6 +305,10 @@ async def send_message(websocket, payload_data):
 
 if __name__ == "__main__":
     try:
+        with open(metadata_file_path,"a"):
+            pass
+        with open(metadata_codha,"a"):
+            pass
         start_server = websockets.serve(handle_websocket, "0.0.0.0", 80)
 
         asyncio.get_event_loop().run_until_complete(start_server)
