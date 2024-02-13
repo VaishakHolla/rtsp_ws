@@ -151,7 +151,7 @@ def _is_complete_metadata_frame(data):
     return data.endswith("</tt:MetadataStream>")
 
 def _process_metadata(data, loop, websocketserver):
-    print(data,flush=True)
+    # print(data,flush=True)
     try:
         # Tracking Notification Topics 
         entering_topic = "tns1:IVA/EnteringField/Entering_field"
@@ -210,8 +210,6 @@ def _process_leaving_object(notification_message):
         print(f"An error occurred in _process_leaving_object: {e}",flush=True)
 
 def _extract_object_data(root, target_object_id):
-    with open(metadata_codha, "a") as metadata_file:
-        metadata_file.write(root + "\n")
     try:
         object_data = {}
         
@@ -260,6 +258,13 @@ def _extract_object_data(root, target_object_id):
                 speed_elem = object_elem.find(".//tt:Speed", namespaces={"tt": "http://www.onvif.org/ver10/schema"})
                 if speed_elem is not None:
                     object_data["Speed"] = speed_elem.text
+
+
+                # Check if the object's ID is being tracked
+                if target_object_id in object_info_tracking_stack:
+                    # Save XML data only for tracked objects
+                    with open(metadata_codha, "a") as metadata_file:
+                        metadata_file.write(ET.tostring(root).decode() + "\n")
 
                 break
     except Exception as e:
